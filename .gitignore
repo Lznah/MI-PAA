@@ -1,0 +1,5 @@
+node_modules
+playground
+*.log
+*.aux
+.DS_Store

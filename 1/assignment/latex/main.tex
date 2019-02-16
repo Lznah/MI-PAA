@@ -1,0 +1,275 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Lachaise Assignment
+% LaTeX Template
+% Version 1.0 (26/6/2018)
+%
+% This template originates from:
+% http://www.LaTeXTemplates.com
+%
+% Authors:
+% Marion Lachaise & François Févotte
+% Vel (vel@LaTeXTemplates.com)
+%
+% License:
+% CC BY-NC-SA 3.0 (http://creativecommons.org/licenses/by-nc-sa/3.0/)
+% 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%----------------------------------------------------------------------------------------
+%	PACKAGES AND OTHER DOCUMENT CONFIGURATIONS
+%----------------------------------------------------------------------------------------
+
+\documentclass{article}
+
+\input{structure.tex} % Include the file specifying the document structure and custom commands
+\usepackage{pgfplots}
+\usepackage{pgfplotstable}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{colortbl}
+
+\pgfplotstableset{% global config, for example in the preamble
+  every head row/.style={before row=\toprule,after row=\midrule},
+  every last row/.style={after row=\bottomrule},
+  fixed,precision=8,
+}
+
+%----------------------------------------------------------------------------------------
+%	ASSIGNMENT INFORMATION
+%----------------------------------------------------------------------------------------
+
+\title{MI-PAA: Assignment \#1} % Title of the assignment
+
+\author{Petr Hanzl\\ \texttt{hanzlpe2@fit.cvut.cz}} % Author name and email address
+
+\date{Czech Technical University - Faculty of Information Technology --- \today} % University, school and/or department name(s) and a date
+
+%----------------------------------------------------------------------------------------
+
+\begin{document}
+
+\maketitle % Print the title
+
+\section*{Tasks}
+	\begin{enumerate}
+		\item Naprogramujte řešení 0/1 problému batohu hrubou silou (tj. nalezněte skutečné optimum). Na~zkušebních datech pozorujte závislost výpočetního času na n.
+
+		\item Naprogramujte řešení problému batohu heuristikou podle poměru cena/váha. Pozorujte:
+		\begin{enumerate}
+			\item závislost výpočetního času na n. Grafy jsou vítány (i pro exaktní metodu),
+			\item průměrnou a maximální relativní chybu (tj. zhoršení proti exaktní metodě) v závislosti na n.
+		\end{enumerate}
+	\end{enumerate}
+
+%----------------------------------------------------------------------------------------
+%	INTRODUCTION
+%----------------------------------------------------------------------------------------
+\hrulefill
+\section*{Introduction} % Unnumbered section
+
+The knapsack problem is a basic algoritmic problem, taught at universities all around the world. Therefore, it is considered to be the basic knowledge of every computer science graduate. The knapsack problem has various modifications, the most common version is known as 0/1 knapsack problem.
+
+%----------------------------------------------------------------------------------------
+%	PROBLEM 1
+%----------------------------------------------------------------------------------------
+
+\section*{0/1 knapsack problem} % Numbered section
+
+ Given the knapsack weight capacity of $W$ kilograms and a set of $N$ items, each has its own unique index $i \in N^+$, a value of $v_i \in R^+$ money and weight of $w_i \in R^+$ kilograms. Determine which items should be put into the knapsack to maximize its value so that the sum of the weights is less than or equal to the weight capacity.
+
+% Math equation/formula
+\begin{equation}
+	\text{maximize}\sum_{i=1}^{n}{v_ix_i}
+\end{equation}
+
+
+\begin{equation}
+	\text{subject to}\sum_{i=1}^{n}{w_ix_i} \leq W \text{ and }  x_i \in \{0,1\}
+\end{equation}
+\begin{info}
+	$x_i$ represents whether the $i$-th item is present in the knapsack or not.
+\end{info}
+%------------------------------------------------
+	\section{Bruteforce}
+		To find the optimal solution for 0/1 knapsack problem, it means finding such a combination of binary elements $x_i$ of a vector, such that no other vector with different elements has higher value. 
+
+		Apparently, every vector of $n$ binary values has $2^n$ possible combinations, thus naive brute force algorithm can find optimal solution for worst case in exponential time of $2^n$, because every combination has to be checked by the algorithm. Even though some algorithms have lower computation times in average, none are discussed in this assignment as it is outside the scope of this problem.
+
+		\begin{center}
+			\begin{minipage}{1\linewidth} % Adjust the minipage width to accomodate for the length of algorithm lines
+				\begin{algorithm}[H]
+					\KwIn{$(maxWeight, items[N])$
+
+					$maxWeight$ - a weight capacity;
+
+					$items[N]$ - a numbered set of $N$ items, each with $value$ and $weight$}  % Algorithm inputs
+					\KwResult{$(maxValue, maxConfiguration)$
+
+					$maxValue$ - an optimal value of the knapsack;
+
+					$maxConfiguration$ - an integer whose bits represent presence of an $i$-th item in the knapsack} % Algorithm outputs/results
+					\hrulefill
+					\medskip
+
+					$maxValue \leftarrow 0$ \;
+					$maxConfiguration \leftarrow 0$ \;
+
+					\For{ $configuration \leftarrow 0..2^N$}{
+						$tmpValue \leftarrow 0$ \;
+						$tmpWeight \leftarrow 0$ \;
+						\For{every $i$-th bit of $configuration$}{
+							\If{$i$-th bit is set}{
+								$tmpValue \leftarrow tmpValue + items[i].value$ \;
+								$tmpWeight \leftarrow tmpWeight + items[i].weight$ \;
+							}
+						}
+						\If{$(tmpWeight \leq maxWeight) \land (tmpValue \geq maxValue)$}{
+							$maxValue \leftarrow tmpValue$ \;
+							$maxConfiguration \leftarrow configuration$ \;
+						}
+					}
+					{\bf return} $(maxValue,maxConfiguration)$ \;
+					\caption{\texttt{01Knapsack-Bruteforce}} % Algorithm name
+					\label{alg:knapsack-bruteforce}   % optional label to refer to
+				\end{algorithm}
+			\end{minipage}
+		\end{center}
+		\subsection{Results}
+
+\begin{figure}[h!]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+	title style={anchor=center,yshift=10},
+ 	title = Graph 1 - Time series of 01Knapsack-Bruteforce algorithm,
+    ylabel={Time (s)},
+    xlabel=Number of items,
+    legend pos=south east,
+    legend entries={Average,Min,Max},
+    legend style={at={(axis cs:10,15)},anchor=south west}
+    ]
+  \addplot table [x=N,y=avg] {bruteforce.txt};
+  \addplot table [x=N,y=min] {bruteforce.txt};
+  \addplot table [x=N,y=max] {bruteforce.txt};
+\end{axis}
+\end{tikzpicture}
+\medskip
+
+\pgfplotstabletypeset[
+  columns/N/.style={column name=N items (Hz)},
+  columns/avg/.style={column name=Avg. time (s)},
+  columns/min/.style={column name=Min. time (s)},
+  columns/max/.style={column name=Max. time (s)}
+]{bruteforce.txt}
+\end{figure}
+
+	
+	\section{Heuristic approach}
+		Finding the optimal solution might be impractical for applications where the goal is to find a satisfactory but immediate solution. 
+		Heuristic based algorithms can be used to speed up the process of finding these solutions.
+		A good example of heuristic approach for 0/1 knapsack problem is to put most valuable items into knapsack at first.
+		
+		The required heuristic for this assigment is to use ratio of value to weight.
+		The algorithm below continously puts items into knapsack until the sum of weights of all the items in knapsack plus new possibly added item, is not greater than knapsack weight capacity.
+		From the given results of heuristic algorithm, the average and the maximal approximation errors of the heuristic and bruteforce method are calculated and plotted onto a separated graph.
+
+		\begin{center}
+			\begin{minipage}{1\linewidth} % Adjust the minipage width to accomodate for the length of algorithm lines
+				\begin{algorithm}[H]
+					\KwIn{$(maxWeight, items[N])$
+
+					$maxWeight$ - a weight capacity;
+
+					$items[N]$ - a numbered set of $N$ items, each with $value$ and $weight$}  % Algorithm inputs
+					\KwResult{$(maxValue, maxConfiguration)$
+
+					$maxValue$ - a suboptimal value;
+
+					$maxConfiguration$ - an integer whose bits represent presence of an $i$-th item in the knapsack} % Algorithm outputs/results
+					\hrulefill
+					\medskip
+
+					$sortedItems \leftarrow sortItemsByRatioOfValueToWeight(items)$ \;
+					$maxValue \leftarrow 0$ \;
+					$maxConfiguration \leftarrow arrayOfSize(N)$ \;
+					$maxConfiguration.fillWith(0)$ \;
+					$tmpWeight \leftarrow 0$
+
+					\For{ $i=0..N $}{
+						\If{$(tmpWeight + sortedItems[i].weight \leq maxWeight) $}{
+							$maxValue \leftarrow maxValue + sortedItems[i].value$ \;
+							$maxConfiguration[i] \leftarrow 1$ \;
+						}
+					}
+					{\bf return} $(maxValue,maxConfiguration)$ \;
+					\caption{\texttt{01Knapsack-Heuristic}} % Algorithm name
+					\label{alg:knapsack-heuristic}   % optional label to refer to
+				\end{algorithm}
+			\end{minipage}
+		\end{center}
+
+
+\clearpage
+\subsection{Results}
+		\begin{figure}[h!]
+			\centering
+			\begin{tikzpicture}
+			\begin{axis}[
+				title style={anchor=center,yshift=10},
+			 	title = Graph 2 - Comparison of bruteforce and heuristic method,
+			    ylabel={Time (s)},
+			    xlabel=Number of items,
+			    legend pos=south east,
+			    legend entries={Bruteforce, Heuristic},
+			    legend style={at={(axis cs:10,15)},anchor=south west}
+			    ]
+			  \addplot table [x=N,y=heuristic] {comparison.txt};
+			  \addplot table [x=N,y=bruteforce] {comparison.txt};
+			\end{axis}
+			\end{tikzpicture}
+
+
+			\pgfplotstabletypeset[
+			  columns/N/.style={column name=N items},
+			  columns/heuristic/.style={column name=Heuristic Avg. time (s)},
+			  columns/bruteforce/.style={column name=Bruteforce Avg. time time (s)}
+			]{comparison.txt}
+		\end{figure}
+
+		\clearpage
+		\begin{figure}[h!]
+			\centering
+			\begin{tikzpicture}
+			\begin{axis}[
+				title style={anchor=center,yshift=10},
+			 	title = Graph 3 - Approximation errors of the heuristic method (value/weight ratio),
+			    ylabel={Approximation Error},
+			    xlabel=Number of items,
+			    legend pos=south east,
+			    legend entries={Avg. Err.,Max. Err.},
+			    legend style={anchor=south west}
+			    ]
+			  \addplot table [x=N,y=avg] {errors.txt};
+			  \addplot table [x=N,y=max] {errors.txt};
+			\end{axis}
+			\end{tikzpicture}
+
+			\pgfplotstabletypeset[
+			  columns/N/.style={column name=N items},
+			  columns/max/.style={column name=Max. Error},
+			  columns/avg/.style={column name=Avg. Error}
+			]{errors.txt}
+		\end{figure}
+\section{Conclusion}
+	The operating time of the bruteforce algorithm has exponential growth that is also shown on the graph~1. 
+
+	From the observations of the graph~2 and the table underneath, it can be see that the computation time for the heuristic method almost did not grow for larger instances at least in the comparison with the bruteforce method. Hence, its time complexity is linear.
+
+	Also, it seems that the heuristic algorithm with higher number of available items tends to return solutions that are closer to optimal solution, which results from lower average and also lower maximal approximation error that is plotted in the graph~3.
+	
+	Because of the time complexity of the larger instances, that take approximately whole days to compute, computations for these instances are not finished yet. This is also the reason why bruteforce results for higher instances are not included in this assigment.
+	
+	All solutions, times and approximation errors are stored in \textbf{/problems/data.json}. How to run the solver is described in \textbf{README.md}.
+
+
+\end{document}

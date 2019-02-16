@@ -1,0 +1,459 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Lachaise Assignment
+% LaTeX Template
+% Version 1.0 (26/6/2018)
+%
+% This template originates from:
+% http://www.LaTeXTemplates.com
+%
+% Authors:
+% Marion Lachaise & François Févotte
+% Vel (vel@LaTeXTemplates.com)
+%
+% License:
+% CC BY-NC-SA 3.0 (http://creativecommons.org/licenses/by-nc-sa/3.0/)
+% 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%----------------------------------------------------------------------------------------
+%	PACKAGES AND OTHER DOCUMENT CONFIGURATIONS
+%----------------------------------------------------------------------------------------
+
+\documentclass{article}
+
+\input{structure.tex} % Include the file specifying the document structure and custom commands
+\usepackage{pgfplots}
+\usepackage{pgfplotstable}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{algorithmicx}
+\usepackage{colortbl}
+
+\pgfplotstableset{% global config, for example in the preamble
+  every head row/.style={before row=\toprule,after row=\midrule},
+  every last row/.style={after row=\bottomrule},
+  fixed,precision=8,
+}
+
+%----------------------------------------------------------------------------------------
+%	ASSIGNMENT INFORMATION
+%----------------------------------------------------------------------------------------
+
+\title{MI-PAA: Assignment \#3} % Title of the assignment
+
+\author{Petr Hanzl\\ \texttt{hanzlpe2@fit.cvut.cz}} % Author name and email address
+
+\date{Czech Technical University - Faculty of Information Technology --- \today} % University, school and/or department name(s) and a date
+
+%----------------------------------------------------------------------------------------
+
+\begin{document}
+
+\maketitle % Print the title
+
+\section*{Tasks}
+	\begin{enumerate}
+		\item Prozkoumejte citlivost metod řešení problému batohu na parametry instancí generovaných generátorem náhodných instancí. Máte-li podezření na další závislosti, modifikujte zdrojový tvar generátoru.
+		\item Na základě zjištění navrhněte a proveďte experimentální vyhodnocení kvality řešení a výpočetní náročnosti.
+		\item Zkoumejte zejména následující metody:
+		\begin{enumerate}
+			\item hrubá síla (pokud z implementace není evidentní úplná necitlivost na vlastnosti instancí),
+			\item metoda větví a hranic, případně ve více variantách,
+			\item dynamické programování (dekompozice podle ceny a/nebo hmotnosti). FPTAS algoritmus není nutné testovat, pouze pokud by bylo podezření na jiné chování, než DP.
+			\item heuristika - poměr cena/váha.
+		\end{enumerate}
+		\item Pozorujte zejména závislosti výpočetního času (případně počtu testovaných stavů) a rel. chyby (v případě heuristiky) na:
+		\begin{enumerate}
+			\item maximální váze věcí,
+			\item maximální ceně věcí,
+			\item poměru kapacity batohu k sumární váze,
+			\item granularitě (pozor - zde si uvědomte smysl exponentu granularity).
+		\end{enumerate}
+		\item Doporučuje se zafixovat všechny parametry na konstantní hodnotu a vždy plynule měnit jeden parametr. Je nutné naměřit výsledky pro aspoň čtyři (opravdu minimálně) vhodně zvolené hodnoty parametru, jinak některé závislosti nebude možné vypozorovat.
+	\end{enumerate}
+
+%----------------------------------------------------------------------------------------
+%	INTRODUCTION
+%----------------------------------------------------------------------------------------
+\hrulefill
+\section*{Introduction} % Unnumbered section
+
+The knapsack problem is a basic algoritmic problem, taught at universities all around the world. Therefore, it is considered to be the basic knowledge of every computer science graduate. The knapsack problem has various modifications, the most common version is known as 0/1 knapsack problem.
+
+%----------------------------------------------------------------------------------------
+%	PROBLEM 1
+%----------------------------------------------------------------------------------------
+
+\section*{0/1 knapsack problem} % Numbered section
+
+ Given the knapsack weight capacity of $W$ kilograms and a set of $N$ items, each has its own unique index $i \in N^+$, a value of $v_i \in R^+$ money and weight of $w_i \in R^+$ kilograms. Determine which items should be put into the knapsack to maximize its value so that the sum of the weights is less than or equal to the weight capacity.
+
+% Math equation/formula
+\begin{equation}
+	\text{maximize}\sum_{i=1}^{n}{v_ix_i}
+\end{equation}
+
+
+\begin{equation}
+	\text{subject to}\sum_{i=1}^{n}{w_ix_i} \leq W \text{ and }  x_i \in \{0,1\}
+\end{equation}
+\begin{info}
+	$x_i$ represents whether the $i$-th item is present in the knapsack or not.
+\end{info}
+%------------------------------------------------
+	\section{Bruteforce}
+		To find the optimal solution for 0/1 knapsack problem, it means finding such a combination of binary elements $x_i$ of a vector, such that no other vector with different elements has higher value. 
+
+		Apparently, every vector of $n$ binary values has $2^n$ possible combinations, thus naive brute force algorithm can find optimal solution for worst case in exponential time of $2^n$, because every combination has to be checked by the algorithm. Even though some algorithms have lower computation times in average, none are discussed in this assignment as it is outside the scope of this problem.
+
+		\begin{center}
+			\begin{minipage}{1\linewidth} % Adjust the minipage width to accomodate for the length of algorithm lines
+				\begin{algorithm}[H]
+					\KwIn{$(maxWeight, items[N])$
+
+					$maxWeight$ - a weight capacity;
+
+					$items[N]$ - a numbered set of $N$ items, each with $value$ and $weight$}  % Algorithm inputs
+					\KwResult{$(maxValue, maxConfiguration)$
+
+					$maxValue$ - an optimal value of the knapsack;
+
+					$maxConfiguration$ - an integer whose bits represent presence of an $i$-th item in the knapsack} % Algorithm outputs/results
+					\hrulefill
+					\medskip
+
+					$maxValue \leftarrow 0$ \;
+					$maxConfiguration \leftarrow 0$ \;
+
+					\For{ $configuration \leftarrow 0..2^N$}{
+						$tmpValue \leftarrow 0$ \;
+						$tmpWeight \leftarrow 0$ \;
+						\For{every $i$-th bit of $configuration$}{
+							\If{$i$-th bit is set}{
+								$tmpValue \leftarrow tmpValue + items[i].value$ \;
+								$tmpWeight \leftarrow tmpWeight + items[i].weight$ \;
+							}
+						}
+						\If{$(tmpWeight \leq maxWeight) \land (tmpValue \geq maxValue)$}{
+							$maxValue \leftarrow tmpValue$ \;
+							$maxConfiguration \leftarrow configuration$ \;
+						}
+					}
+					{\bf return} $(maxValue,maxConfiguration)$ \;
+					\caption{\texttt{01Knapsack-Bruteforce}} % Algorithm name
+					\label{alg:knapsack-bruteforce}   % optional label to refer to
+				\end{algorithm}
+			\end{minipage}
+		\end{center}
+
+
+	\clearpage
+	\section{Branch and Bound}
+		Although the time complexity of B\&B algorithm is still $O(2^n)$ for the worst case, it reduces number of visited nodes in the state space by denying not reasonable choices. For the 0/1 knapsack problem the denied state sub-space is represented by sub-trees, that could not give a better solution than so far best given solution, even if all items were added to the knapsack.
+
+		\begin{center}
+			\begin{minipage}{1\linewidth} % Adjust the minipage width to accomodate for the length of algorithm lines
+				\begin{algorithm}[H]
+					\KwIn{$(maxWeight, items[N])$
+
+					$maxWeight$ - a weight capacity;
+
+					$items[N]$ - a numbered set of $N$ items, each with $value$ and $weight$}  % Algorithm inputs
+					\KwResult{$(maxValue)$
+
+					$maxValue$ - an optimal value of the knapsack;} % Algorithm outputs/results
+					\hrulefill
+					\medskip
+
+
+  					bestPrice $\leftarrow$ 0\;
+					$sum \leftarrow 0$\;
+					\For{$i \leftarrow items.length-1$; $i \ge 0$; $i$++}{
+						sum += items[i].price\;
+    					maxProfitTable[i] = sum\;
+					}
+					return rec(0,0,0)\;
+					\ 
+
+					\SetKwProg{Fn}{Function}{}{}
+					\Fn{rec(currentWeight, currentElement)}{
+						\If{currentElement+1 > items.length}{
+							\If{bestPrice < currentPrice} {
+								bestPrice = currentPrice;
+							}
+							return 0\;
+						}
+						\If{currentPrice + maxProfitTable[currentElement] < bestPrice} {
+					      return 0\;
+					    }
+
+					    \If{currentWeight+items[currentElement].weight > maxWeight} {
+					      return rec(currentWeight, currentPrice, currentElement+1)\;
+					    }
+					    right $\leftarrow$ items[currentElement].price + rec(currentWeight+items[currentElement].weight, currentPrice+items[currentElement].price, currentElement+1)\;
+					    left $\leftarrow$ rec(currentWeight, currentPrice, currentElement+1)\;
+					    thisNodeMaxPrice $\leftarrow$ Math.max(left, right)\;
+					    \If{bestPrice < thisNodeMaxPrice} {
+					      bestPrice $\leftarrow$ thisNodeMaxPrice\;
+					    }
+					    return thisNodeMaxPrice\;
+					}
+					\caption{\texttt{01Knapsack-BranchAndBound}} % Algorithm name
+					\label{alg:knapsack-branchandbound}   % optional label to refer to
+
+				\end{algorithm}
+			\end{minipage}
+		\end{center}
+\clearpage
+		\section{Dynamic programming (Decomposition by price)}
+		Dynamic programming has proven to be a very good approach for 0/1 knapsack problem. It has its limitations such that the prices (or weights) have to be only discrete values and the sum of prices is not extremely high. Specificity of dynamic programming is that it reuses already computed values that are continuously saved and stored in a 2d array. The time complexity for the version with decomposition by price is $O(n*P)$, where $n$ is number of items and $P$ is a sum of all prices. The time complexity for the version with decomposition by weight is $O(n*W)$, W is the capacity of knapsack.
+
+		\begin{center}
+			\begin{minipage}{1\linewidth} % Adjust the minipage width to accomodate for the length of algorithm lines
+				\begin{algorithm}[H]
+					\KwIn{$(maxWeight, items[N])$
+
+					$maxWeight$ - a weight capacity;
+
+					$items[N]$ - a numbered set of $N$ items, each with $value$ and $weight$}  % Algorithm inputs
+					\KwResult{$(maxValue, maxConfiguration)$
+
+					$maxPrice, maxPriceConfiguration$ - a suboptimal value;
+					} % Algorithm outputs/results
+					\hrulefill
+					\medskip
+
+					maxPossiblePrice $\leftarrow$ items.reduce( (a,b) => a+b.price, 0)\;
+					W $\leftarrow$ []\;
+					\For{var i=0; i$\leq$items.length; i++} {
+					    W[i] $\leftarrow$ []\;
+					    \For{price $\leftarrow$ 0; price$\leq$maxPossiblePrice; price++}{
+					      W[i][price] $\leftarrow$ 0\;
+					    }
+					}
+
+						\For{price $\leftarrow$ 1; price$\leq $maxPossiblePrice; price++}{
+							W[0][price] = Infinity\;
+						}
+					  \For{n$\leftarrow$1; n $\leq$ items.length; n++}{
+					    item$\leftarrow$items[n-1]\;
+					    \For{price$\leftarrow$0; price$\leq$maxPossiblePrice; price++}{
+					      itemIncluded $\leftarrow$ Infinity\;
+					      itemNotIncluded $\leftarrow$ W[n-1][price]\;
+								\If{price $\geq $ item.price \&\& W[n-1][price-item.price] != Infinity} {
+									itemIncluded $\leftarrow$ W[n-1][price-item.price] + item.weight\;
+								}
+							W[n][price] $\leftarrow$ Math.min(itemIncluded, itemNotIncluded)\;
+					    }
+					  }
+
+					  \For{price $\leftarrow$ maxPossiblePrice; price $\geq$ 0; price--}{
+								\If{maxWeight $\geq$ W[items.length][price]} {
+					        maxPrice $\leftarrow$ price\;
+					        break\;
+					      }
+						}
+
+					  tempPrice $\leftarrow$ maxPrice\;
+					  maxPriceConfiguration $\leftarrow$ []\;
+					  \For{i $\leftarrow$ items.length-1; i $\geq$ 0; i--} {
+					    \If{W[i+1][tempPrice] != W[i][tempPrice]} {
+					      maxPriceConfiguration[i] $\leftarrow$ true\;
+					      price $\leftarrow$ price-items[i].price\;
+					    }\Else{
+					      maxPriceConfiguration[i] $\leftarrow$ false\;
+					    }
+					  }
+					  return \{maxPrice, maxPriceConfiguration\}
+					\caption{\texttt{01Knapsack-Dynamic}} % Algorithm name
+					\label{alg:knapsack-dynamic}   % optional label to refer to
+				\end{algorithm}
+			\end{minipage}
+		\end{center}
+
+		\section{Heuristic approach}
+		Finding the optimal solution might be impractical for applications where the goal is to find a satisfactory but immediate solution. 
+		Heuristic based algorithms can be used to speed up the process of finding these solutions.
+		A good example of heuristic approach for 0/1 knapsack problem is to put most valuable items into knapsack at first.
+		
+		The required heuristic for this assigment is to use ratio of value to weight.
+		The algorithm below continously puts items into knapsack until the sum of weights of all the items in knapsack plus new possibly added item, is not greater than knapsack weight capacity.
+		From the given results of heuristic algorithm, the average and the maximal approximation errors of the heuristic and bruteforce method are calculated and plotted onto a separated graph.
+
+		\begin{center}
+			\begin{minipage}{1\linewidth} % Adjust the minipage width to accomodate for the length of algorithm lines
+				\begin{algorithm}[H]
+					\KwIn{$(maxWeight, items[N])$
+
+					$maxWeight$ - a weight capacity;
+
+					$items[N]$ - a numbered set of $N$ items, each with $value$ and $weight$}  % Algorithm inputs
+					\KwResult{$(maxValue, maxConfiguration)$
+
+					$maxValue$ - a suboptimal value;
+
+					$maxConfiguration$ - an integer whose bits represent presence of an $i$-th item in the knapsack} % Algorithm outputs/results
+					\hrulefill
+					\medskip
+
+					$sortedItems \leftarrow sortItemsByRatioOfValueToWeight(items)$ \;
+					$maxValue \leftarrow 0$ \;
+					$maxConfiguration \leftarrow arrayOfSize(N)$ \;
+					$maxConfiguration.fillWith(0)$ \;
+					$tmpWeight \leftarrow 0$
+
+					\For{ $i=0..N $}{
+						\If{$(tmpWeight + sortedItems[i].weight \leq maxWeight) $}{
+							$maxValue \leftarrow maxValue + sortedItems[i].value$ \;
+							$maxConfiguration[i] \leftarrow 1$ \;
+						}
+					}
+					{\bf return} $(maxValue,maxConfiguration)$ \;
+					\caption{\texttt{01Knapsack-Heuristic}} % Algorithm name
+					\label{alg:knapsack-heuristic}   % optional label to refer to
+				\end{algorithm}
+			\end{minipage}
+		\end{center}
+
+\clearpage
+
+\section{Assumption}
+	Every method for solving knapsack problem has its weaknesses. These weaknesses are well-known for each method, but it can vary for different algorithms or implementations respectively. The summary underneath shows, which parameters of the given knapsack problem generator were chosen to experimentally proof the assumptions.
+
+	\subsection{Branch and Bounch}
+		This method counts on temporary best found price and sum of weight of all not-yet added items. Branch and Bound can not sufficiently deal with instances, which do not allow significantly prune branches. Prunning of branch happens when total sum of prices of not-yet added items and actual price is lower than the best yet found price. Apparently, the ratio of knapsack capacity against the sum of all weight seems to be the most reasonable parameter to be tested.
+	\subsection{Dynamic programming (decomposion by price)}
+		The time complexity of the dynamic programming depents on the sum of prices of all items and number of items. 
+		More specificaly, it depents on the size of the table with dimension of \textbf{number\_of\_items} * \textbf{sum\_of\_prices}. We could measure both parameters, but the sum of prices seems to be more reasonable, because it can rise much easier than the number of items.
+	\subsection{Heuristic approach}
+		The heuristic approach has always the same time complexity (only the larger numbers of items has an influence on the time complexity). Thus, error rate is measuared instead. I assumed, that the heuristic approach may gives suboptimal results with lower error rate for instances with smaller ratio of knapsack capacity againts the total sum of prices. Also, the error rate could possibly depends on a granulatiry of items.
+	\subsection*{Summary}
+		\begin{center}
+			\begin{tabular}{ |l|c|c|c|c| } 
+				 \hline
+				  							& \textbf{Branch and Bound} & \textbf{DP} & \textbf{Heuristic (1)} & \textbf{Heuristic (2)} \\ \hline
+				 n (Number of items) 		& 35 			& 50	 			& 100 			& 100 						\\ 
+				 N (Number of instances) 	& 50 			& 50 				& 100 			& 100 						\\  
+				 m (ratio n:sum of $w_i$) 	& 0.1 \dots 0.9 & 0.5 				& 0.1 \dots 0.9 & 0.5 						\\  
+				 W (max $w_i$) 				& 1000 			& 100 				& 1000 			& 1000 						\\  
+				 C (max $v_i$)				& 10000 		& 10 \dots 10000 	& 1000 			& 1000						\\ 
+				 k (exponent) 				& 1 			& 1 				& 1 			& 0.1 \dots 0.9 			\\ 
+				 d (heavier items) 			& 0 			& 0 				& 0 			& 0 						\\ 
+				 \hline
+			\end{tabular}
+		\end{center}
+ \clearpage
+\section{Results}
+	\subsection{Branch and Bound - quotient m}
+	
+	\begin{figure}[h!]
+		\centering
+		\begin{tikzpicture}
+		\begin{axis}[
+			title style={anchor=center,yshift=10},
+		 	title = Graph 1 - Dependency of computational time on quotient m,
+		    ylabel={Time},
+		    xlabel=Quotient m,
+		    legend pos=south east,
+		    legend entries={Max. Time,Avg. Time},
+		    legend style={anchor=south west}
+		    ]
+		  \addplot table [x=m,y=max] {bab-m.txt};
+		  \addplot table [x=m,y=avg] {bab-m.txt};
+		\end{axis}
+		\end{tikzpicture}
+
+		\pgfplotstabletypeset[
+		  columns/m/.style={column name=m quotient},
+		  columns/max/.style={column name=Max. Time},
+		  columns/avg/.style={column name=Avg. Time}
+		]{bab-m.txt}
+	\end{figure}
+
+ 	\clearpage
+	\subsection{Dynamic programming - maximal price of a single item}
+	\begin{figure}[h!]
+		\centering
+		\begin{tikzpicture}
+		\begin{axis}[
+			title style={anchor=center,yshift=10},
+		 	title = Graph 2 - Dependency of computational time on maximal price of a single item,
+		    ylabel={Time},
+		    xlabel=Max. price of an item,
+		    legend pos=south east,
+		    legend style={anchor=south west}
+		    ]
+		  \addplot table [x=C,y=avg] {dp-C.txt};
+		\end{axis}
+		\end{tikzpicture}
+
+		\pgfplotstabletypeset[
+		  columns/C/.style={column name=Max. price of an item},
+		  columns/max/.style={column name=Max. Time},
+		  columns/avg/.style={column name=Avg. Time}
+		]{dp-C.txt}
+	\end{figure}
+
+
+	\clearpage
+	\subsection{Heuristic approach - quotient m}
+	\begin{figure}[h!]
+		\centering
+		\begin{tikzpicture}
+		\begin{axis}[
+			title style={anchor=center,yshift=10},
+		 	title = Graph 3 - Dependency of approx. error on quotient m,
+		    ylabel={Approx. error},
+		    xlabel=Quotient m,
+		    legend pos=south east,
+		    legend entries={Max. Error,Avg. Error},
+		    legend style={anchor=south west}
+		    ]
+		  \addplot table [x=m,y=max] {heuristic-m.txt};
+		  \addplot table [x=m,y=avg] {heuristic-m.txt};
+		\end{axis}
+		\end{tikzpicture}
+
+		\pgfplotstabletypeset[
+		  columns/m/.style={column name=m quotient},
+		  columns/max/.style={column name=Max. Error},
+		  columns/avg/.style={column name=Avg. Error}
+		]{heuristic-m.txt}
+	\end{figure}
+
+	\clearpage
+	\subsection{Heuristic approach - exponent k}
+	\begin{figure}[h!]
+		\centering
+		\begin{tikzpicture}
+		\begin{axis}[
+			title style={anchor=center,yshift=10},
+		 	title = Graph 4 - Dependency of approx. error on exponent k,
+		    ylabel={Approx. error},
+		    xlabel=Exponent k,
+		    legend pos=south east,
+		    legend entries={Max. Error,Avg. Error},
+		    legend style={anchor=south west}
+		    ]
+		  \addplot table [x=m,y=max] {heuristic-k.txt};
+		  \addplot table [x=m,y=avg] {heuristic-k.txt};
+		\end{axis}
+		\end{tikzpicture}
+
+		\pgfplotstabletypeset[
+		  columns/m/.style={column name=k exponent},
+		  columns/max/.style={column name=Max. Error},
+		  columns/avg/.style={column name=Avg. Error}
+		]{heuristic-k.txt}
+	\end{figure}
+
+\section{Conclusion}
+	The results of the experiments have proven the assumptions. It can be seen that the computational time for Branch and Bound method depends on the ratio of sum of all weights to knapsack capacity. The peak seems to be at 0.4 and then the average and maximal error rapidly falls. The rapid fall ends around 0.7.
+
+	The results have also proven, that the computation time for dynamic programming depends polynomially on the maximal price of an item.
+
+	I measured two parameters for the heuristic approach and it has proven the assumption, that the approximation error goes down for the instances, which have total sum of weights closer to knapsack capacity. Average approximation error seems fall linearly and the maximal approximation error tends to fall in an exponantional rate. The last parameter I measured, is the $k$ exponent, which controls the granuality of weight in the set of items. The measurement for this parameter did not show any significant dependancy, expect the rise of the approximation error on the edges of measured interval. It seems that the granuality has almost no significant influence on the approximation error.
+
+
+
+\end{document}

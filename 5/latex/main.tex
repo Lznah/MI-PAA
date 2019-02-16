@@ -1,0 +1,683 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Lachaise Assignment
+% LaTeX Template
+% Version 1.0 (26/6/2018)
+%
+% This template originates from:
+% http://www.LaTeXTemplates.com
+%
+% Authors:
+% Marion Lachaise & François Févotte
+% Vel (vel@LaTeXTemplates.com)
+%
+% License:
+% CC BY-NC-SA 3.0 (http://creativecommons.org/licenses/by-nc-sa/3.0/)
+% 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%----------------------------------------------------------------------------------------
+%	PACKAGES AND OTHER DOCUMENT CONFIGURATIONS
+%----------------------------------------------------------------------------------------
+
+\documentclass{article}
+
+\input{structure.tex} % Include the file specifying the document structure and custom commands
+\usepackage{pgfplots}
+\usepackage{pgfplotstable}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{algorithmicx}
+\usepackage{colortbl}
+\usepackage{amsmath}
+
+\pgfplotstableset{% global config, for example in the preamble
+  every head row/.style={before row=\toprule,after row=\midrule},
+  every last row/.style={after row=\bottomrule},
+  fixed,precision=8,
+}
+
+%----------------------------------------------------------------------------------------
+%	ASSIGNMENT INFORMATION
+%----------------------------------------------------------------------------------------
+
+\title{MI-PAA: Assignment \#5} % Title of the assignment
+
+\author{Petr Hanzl\\ \texttt{hanzlpe2@fit.cvut.cz}} % Author name and email address
+
+\date{Czech Technical University - Faculty of Information Technology --- \today} % University, school and/or department name(s) and a date
+
+%----------------------------------------------------------------------------------------
+
+\begin{document}
+
+\maketitle % Print the title
+
+	
+
+%----------------------------------------------------------------------------------------
+%	INTRODUCTION
+%----------------------------------------------------------------------------------------
+\section*{Weighted Maximum Satisfiability Problem - 3SAT (WMSP-3SAT)} % Unnumbered section
+
+Given a conjuctive normal form formula $F$ with positive weights $w_i \in \{w_1,\dots,w_n\}$ assigned to each variable $v_i \in \{v_1,\dots,v_n\}$ and each clause has exactly three variables, find values $x_1,\dots,x_n$ for its variables that satisfy the formula $F$ and maximize weight of all truth variables.
+
+	\begin{gather*}
+		\text{Formula F in CNF with 3 variables in each clause:}\\
+		(v_a \lor v_b \lor v_c)\land\cdots \land (v_d \lor v_e \lor v_f)\\
+		\text{max} \sum_0^n{x_i \cdot w_i}
+	\end{gather*}
+
+%----------------------------------------------------------------------------------------
+%	PROBLEM 1
+%----------------------------------------------------------------------------------------
+
+\section{Generator of problem instances}
+	Algorithm for generating problems creates random clauses with random variables. If number of unique variables in a generated formula is not equal to gives number of variables provided by user, does not count, the algorithm replaces one random clause. It also checks if one variable in not already in the same clause. If true, the variable is changed with another one. It is possible to control number of variables, number of clauses, maximum and minimum in weight distribution and distribution of negation in the formula. Weights have normal distribution and negations have gaussian distribution with a posibility to control its skewness.
+
+	\begin{table}[ht]
+		\centering
+		\begin{tabular}{|l|l|}
+		\hline
+		\textbf{Parametr} & \textbf{Description} \\ \hline
+		\-\-variables       & Number of variables in a formula                  \\ \hline
+		\-\-clauses         & Number of clauses in a formula                    \\ \hline
+		\-\-min         	  & Minimal weight in a normal distribution                     \\ \hline
+		\-\-max             & Maximal weight in a normal distribution                     \\ \hline
+		\-\-skew            & Skewness of gaussian distribution of negations in a formula                      \\ \hline
+		\end{tabular}
+	\end{table}
+
+\section{Genetic Algorithm}
+	Many natural processes have found an application into problem solving and optimization problems. The evolution and the natural selection is not an exception. There are more algorithms which can simulate the evolution, but they usually use similar mechanisms to reproduce an optimal or at least a suboptimal solution. These mechanism are: reproduction, mutation a selection. For every GA, a definition of a fitness function, which scores a quality of an individual, is very important.
+
+
+	\subsection{Fitness}
+	Fitness is defined as a quality of a feasible solution. I used just a simple sum of weights of all truth variables.
+
+	\begin{center}
+			\begin{minipage}{1\linewidth} % Adjust the minipage width to accomodate for the length of algorithm lines
+				\begin{algorithm}[H]
+					\KwIn{$(chromosome[N])$
+
+					$chromosome[N]$ - a chromosome of one solution
+					}
+					\KwResult{$(fitness)$
+
+					$fitness$ -  a quality of a given solution} % Algorithm outputs/results
+					\hrulefill
+					\medskip
+
+					$fitness \gets 0$\\
+					\For{$i\gets 0 \textbf{to} chromosome.length $}{
+						\If{$chromosome[i] == true$} {
+							$fitness += weights[i]$
+						}
+					}
+					$satisfiable \gets true$\\
+					\For{$clause \in clauses$} {
+						$clauseSatisfiable \&= false$
+						\For{$variable \in clause$} {
+							\If{$variable > 0$} {
+								$clauseSatisfiable |= chromosome[variable]$
+							}
+							\If{$variable < 0$}{
+								$clauseSatisfiable |= !chromosome[variable]$
+							}
+						}
+						\If{$clauseSatisfiable != true$} {
+							$randomVariable \gets pickRandomVariable()$
+
+							\If{$chromosome[randomVariable] < 0$} {
+								$chromosome[randomVariable] \gets false$
+							}
+							\If{$chromosome[randomVariable] > 0$} {
+								$chromosome[randomVariable] \gets true$
+							}
+						}
+						$satisfiable \& clauseSatisfiable$
+					}
+					\If{$satisfiable != true$} {
+						$fitness\gets 0$
+					}
+					{\bf return} $(fitness)$
+					\caption{\texttt{computeFitness}} % Algorithm name
+					\label{alg:computeFitness}   % optional label to refer to
+				\end{algorithm}
+			\end{minipage}
+		\end{center}
+
+	\subsection{Variance coefficient}
+		The variance coefficent is calculated from fitness distribution in population every generation to control mutation and crossover. Its formula is:
+		\begin{center}
+			\begin{math}
+				varienceCoefficient = \frac{standardDeviantion}{average}
+			\end{math}
+		\end{center}
+
+	\subsection{Reproduction}
+		And algorithm for reproduction randomly picks individuals from the population, creates new feasible solutions and removes the original ones from population to not pick them again for crossover.
+		If a variance in population is too low, reproduction process tends to return completely new randomly set individuals more often instead of crossovering already found solutions. This is controlled by a global variable \textbf{crossoverProbability} which is computed from variance.
+		Another global variable $\textbf{populationSize}$ is used as a stopping criterion of the reproduction. The probability that a sibling would be added to new population instead of putting there a random individual is calculated as a subtraction of 1 by variance coefficient divided by length of chromosome. 
+		\begin{center}
+			\begin{minipage}{1\linewidth} % Adjust the minipage width to accomodate for the length of algorithm lines
+				\begin{algorithm}[H]
+					\KwIn{$(population[M])$
+
+					$population[size]$ - a population with M individuals
+					}
+					\KwResult{$(population[M])$
+
+					$population[N]$ - the same population but with different individuals} % Algorithm outputs/results
+					\hrulefill
+					\medskip
+
+					$originalSurvivorsCount \gets population.length$\\
+					\While{$population.length \lg populationSize$}{
+						$randomIndividual1 \gets floor(random()\cdot originalSurvivorsCount)$\\
+						$randomIndividual2 \gets floor(random()\cdot originalSurvivorsCount)$\\
+						\If{$randomIndividual1 == randomIndividual2$}{
+							\textbf{continue}
+						}
+						$\{sibling1, sibling2\} \gets singleCrossover(randomIndividual1,randomIndividual2)$\\
+						\If{$crossoverProbability > random() \&\& population.length \le populationSize$} {
+							$population.push(sibling1)$ 
+						}
+						\If{$crossoverProbability > random() \&\& population.length \le populationSize$} {
+							$population.push(sibling2)$ 
+						}
+					}
+					{\bf return} $(population)$
+					\caption{\texttt{crossover}} % Algorithm name
+					\label{alg:crossover}   % optional label to refer to
+				\end{algorithm}
+			\end{minipage}
+		\end{center}
+
+		\subsubsection{Single-point Crossover (SPC)}
+		Genomes of two parents are split at randomly picked point and the parts are swapped to make two siblings. After that, chromosomes of these siblings are repaired to satisfy given formula $F$.
+		\begin{center}
+			\begin{minipage}{1\linewidth} % Adjust the minipage width to accomodate for the length of algorithm lines
+				\begin{algorithm}[H]
+					\KwIn{$(chromosome1[N], chromosome2[N])$
+
+					$chromosome1[N]$ - a chromosome of one randomly chosen solution
+
+					$chromosome2[N]$ - a chromosome of second randomly chosen solution different from the first
+					}
+					\KwResult{$(sibling1[N], sibling2[N])$
+
+					$sibling1[N]$ - a new feasible solution
+
+					$sibling2[N]$ - a new feasible solution} % Algorithm outputs/results
+					\hrulefill
+					\medskip
+
+					$randomPoint \gets floor(random()\cdot chromosome1.length)$\\
+					$ch1p1 \gets chromosome1[0..randomPoint]$\\
+					$ch1p2 \gets chromosome1[randomPoint..chromosome1.length]$\\
+
+					$ch2p1 \gets chromosome2[0..randomPoint]$\\
+					$ch2p2 \gets chromosome2[randomPoint..chromosome2.length]$\\
+
+					$sibling1 = [...ch1p1,...ch2p2]$\\
+					$sibling2 = [...ch2p1,...ch1p2]$\\
+
+					$repair(sibling1)$\\
+					$repair(sibling2)$\\
+					{\bf return} $(sibling1, sibling2)$
+					\caption{\texttt{singlepointCrossover}} % Algorithm name
+					\label{alg:singlepointCrossover}   % optional label to refer to
+				\end{algorithm}
+			\end{minipage}
+		\end{center}
+		\subsubsection{Uniform Crossover (UC)}
+		In uniform crossover, each bit of a child is randomly picked from one of its parents.
+		\begin{center}
+			\begin{minipage}{1\linewidth} % Adjust the minipage width to accomodate for the length of algorithm lines
+				\begin{algorithm}[H]
+					\KwIn{$(chromosome1[N], chromosome2[N])$
+
+					$chromosome1[N]$ - a chromosome of one randomly chosen solution
+
+					$chromosome2[N]$ - a chromosome of second randomly chosen solution different from the first
+					}
+					\KwResult{$(sibling1[N], sibling2[N])$
+
+					$sibling1[N]$ - a new feasible solution
+
+					$sibling2[N]$ - a new feasible solution} % Algorithm outputs/results
+					\hrulefill
+					\medskip
+
+					$sibling1 = []$\\
+					$sibling2 = []$\\
+					\For{$i \gets 0 $\textbf{ to }$chromosome1.length$}{
+						\If{$random() > 0.5$}{
+							$newChromosome2[i] \gets chromosome1[i]$\\
+							$newChromosome1[i] \gets chromosome2[i]$
+						}
+						\Else{
+							$newChromosome2[i] \gets chromosome2[i]$\\
+							$newChromosome1[i] \gets chromosome1[i]$
+						}
+					}
+
+					$repair(sibling1)$\\
+					$repair(sibling2)$\\
+					{\bf return} $(sibling1, sibling2)$
+					\caption{\texttt{uniformCrossover}} % Algorithm name
+					\label{alg:uniformCrossover}   % optional label to refer to
+				\end{algorithm}
+			\end{minipage}
+		\end{center}
+	\subsection{Mutation}
+		For the GA, there is a simple way how to mutate bits and it is flipping their values. Probability of flipping a bit is also controlled by variance of the population, concretely in a global variable $\textbf{mutationProbability}$. It is calculated from variance coefficient divided by length of chromosome.
+		\begin{center}
+			\begin{minipage}{1\linewidth} % Adjust the minipage width to accomodate for the length of algorithm lines
+				\begin{algorithm}[H]
+					\KwIn{$(chromosome[N])$
+
+					$chromosome[N]$ - a chromosome of one solution
+					}
+					\KwResult{$(chromosome[N])$
+
+					$chromosome[N]$ - a mutated feasible solution} % Algorithm outputs/results
+					\hrulefill
+					\medskip
+
+					\For{$i \gets 0 $\textbf{ to }$chromosome.length$}{
+						$randomNode = floor(random()*chromosome.length)$\\
+						\If{$random() < mutationProbability$} {
+							$chromosome[i] \gets !chromosome[i]$
+						}
+					}
+					$repair(chromosome)$\\
+					{\bf return} $(chromosome)$
+					\caption{\texttt{mutation}} % Algorithm name
+					\label{alg:mutation}   % optional label to refer to
+				\end{algorithm}
+			\end{minipage}
+		\end{center}
+	\subsection{Selection}
+		\subsubsection{Best-First (BF)}
+		One heuristic used in this assignment is to pick the best solution from current generation a put it unchanged into next generation. This prevents losing the best-yet found solution. Some of the solutions are more difficult to find, because they can stay in very tight range of steep gradient with very few solutions. 
+		\subsubsection{Tournament}
+		Five individuals are repeatedly picked from the population and the best two solutions with the highest fitness survives to the next generation.
+		\begin{center}
+			\begin{minipage}{1\linewidth} % Adjust the minipage width to accomodate for the length of algorithm lines
+				\begin{algorithm}[H]
+					\KwIn{$(population[M])$
+
+					$population[size]$ - a population with M individuals
+					}
+					\KwResult{$(population[M])$
+
+					$population[N]$ - a new population with surviving solutions} % Algorithm outputs/results
+					\hrulefill
+					\medskip
+
+					$newPopulation \gets []$\\
+					$tournament \gets []$\\
+					$i \gets M$\\
+					\While{$i > 0$}{
+						$randomIndividual \gets floor(random()\cdot originalSurvivorsCount)$\\
+						$tournament.push(randomIndividual)$\\
+						$tmp \gets population[i]$\\
+						$population[i] = population[randomIndividual]$\\
+						$population[randomIndividual] = tmp$\\
+						$i--$\\
+						\If{$tournament.length \ge 5$} {
+							$tournament.sortByFitness()$\\
+							$newPopulation.push(tournament[0])$\\
+							$newPopulation.push(tournament[1])$\\
+							$tournament = []$
+						}
+					}
+					{\bf return} $(population)$
+					\caption{\texttt{tournament}} % Algorithm name
+					\label{alg:tournament}   % optional label to refer to
+				\end{algorithm}
+			\end{minipage}
+		\end{center}
+
+		\subsubsection{Catastrophe (C)}
+		Most individuals in the population are killed, when the variance coefficient gets below 0.00001. The catastrophe leads to higher standart deviation in population and finds new ways of solutions. For my experiments, I set up, that only 10\% of individuals, which are sorted in descending order by their fitness, survives the catastrophe.
+
+	\subsection{Repair}
+		
+		To evaluate formula in CNF as a true formula, all clauses has to be true, which means, at least one variable or its negation has to be true. The repair algorithm tries to fulfill all clauses by random selection of variable and setting it in this way. After repairing all clauses, the algorithm checks if the formula is true. If it is not true, the algorithm continues to find other random configuration.
+
+		\subsubsection{Full Random Repair (FRR)}
+		\begin{center}
+			\begin{minipage}{1\linewidth} % Adjust the minipage width to accomodate for the length of algorithm lines
+				\begin{algorithm}[H]
+					\KwIn{$(chromosome[N], clauses[M])$
+
+					$chromosome[N]$ - chromosome of an individual with length of $N$ variables, not necessarily a feasible solution
+
+					$clauses[M]$ - a list of $M$ clauses}  % Algorithm inputs
+					\KwResult{$(chromosome[N])$
+
+					$chromosome[N]$ - a feasible solution} % Algorithm outputs/results
+					\hrulefill
+					\medskip
+
+					$satisfiable \gets false$
+
+					\While{$satisfiable != true$} {
+						$satisfiable \gets true$
+
+						\For{$clause \in clauses$} {
+							$clauseSatisfiable \&= false$
+
+							\For{$variable \in clause$} {
+								\If{$variable > 0$} {
+									$clauseSatisfiable |= chromosome[variable]$
+								}
+								\If{$variable < 0$}{
+									$clauseSatisfiable |= !chromosome[variable]$
+								}
+							}
+
+							\If{$clauseSatisfiable != true$} {
+								$randomVariable \gets pickRandomVariable(clause)$
+
+								\If{$chromosome[randomVariable] < 0$} {
+									$chromosome[randomVariable] \gets false$
+								}
+								\If{$chromosome[randomVariable] > 0$} {
+									$chromosome[randomVariable] \gets true$
+								}
+							}
+							$satisfiable \& clauseSatisfiable$
+						}
+					}
+					{\bf return} $(chromosome[N])$ \;
+					\caption{\texttt{FullRandomRepair}} % Algorithm name
+					\label{alg:FullRandomRepair}   % optional label to refer to
+				\end{algorithm}
+			\end{minipage}
+		\end{center}
+
+		\subsubsection{Heuristic Repair (HR)}
+		I also implemented more sofisticated heuristic repairing algorithm. The heuristic is based on maximazing sum of clauses. As it was said before, every clause need to be true to fulfill requirement of true formula. If some clause is not true, the algorithm sets true its variable with highest weight. If there is negation of variable with highest weight, the algorithm sets correctly a different variable. Its value depends if it is negation of variable or not.
+		\begin{center}
+			\begin{minipage}{1\linewidth} % Adjust the minipage width to accomodate for the length of algorithm lines
+				\begin{algorithm}[H]
+					\KwIn{$(chromosome[N])$
+
+					$chromosome[N]$ - chromosome of an individual with length of $N$ variables, not necessarily a feasible solution
+
+					$clauses[M]$ - a list of $M$ clauses}  % Algorithm inputs
+					\KwResult{$(chromosome[N])$
+
+					$chromosome[N]$ - a feasible solution} % Algorithm outputs/results
+					\hrulefill
+					\medskip
+
+					\For{$i \gets 1 \textbf{ to } clauses.length$} {
+						$clauseSatisfiable \&= false$
+
+						\For{$variable \in clauses[i]$} {
+							\If{$variable > 0$} {
+								$clauseSatisfiable |= chromosome[variable]$
+							}
+							\If{$variable < 0$}{
+								$clauseSatisfiable |= !chromosome[variable]$
+							}
+						}
+
+						\If{$clauseSatisfiable != true$} {
+							$candidate \gets candidatesOfClause[i]$\\
+							$variable = abs(clause[candidate])-1$
+
+							\If{$clause[candidate] < 0$} {
+								$otherCandidate \gets floor(random()\cdot 3)$\\ 
+								\While{$otherCandidate != candidate$} {
+									$otherCandidate = \gets floor(random()\cdot 3)$\\
+								}
+								$otherVariable = abs(clause[candidate])-1$\\
+								\If{$clause[otherCandidate] < 0$} {
+									$chromosome[variable] \gets false$
+								}
+								\If{$clause[otherCandidate] > 0$} {
+									$chromosome[variable] \gets true$
+								}
+							}
+							\If{$clause[candidate] > 0$} {
+								$chromosome[variable] \gets true$
+							}
+						}
+					}
+					{\bf return} $(chromosome[N])$ \;
+					\caption{\texttt{HeuristicRepair}} % Algorithm name
+					\label{alg:HeuristicRepair}   % optional label to refer to
+				\end{algorithm}
+			\end{minipage}
+		\end{center}
+
+\section{Experimental part}
+
+	\subsection{Generated data}
+	I have chosen one representative problem with 100 variables and 200 clauses. Negative variables were distributed equally as positive variables.
+	\begin{center}
+		\textbf{generator \-\-variables=100 \-\-clauses=200 \-\-skew=1 \-\-min=0 \-\-max=100} 
+	\end{center}
+
+	\clearpage
+
+
+	All the data were measured over 300 generations with 100 individuals in population.
+	\subsubsection{Single-point Crossover \& With Full Random Repair}
+	It can be seen, that since the 30th generation, there is no deviation and since that, algorithm cannot find newer solution, because it stuck at local optimum. Maybe higher mutation rate would help to leave this local optimum. Even though GA has mutation, Full Random Repair probably repair mutated solutions.  
+	\textbf{Result: 2183, Average: 2219} 
+
+	\begin{figure}[h!]
+		\centering
+		\begin{tikzpicture}
+		\begin{axis}[
+			title style={anchor=center,yshift=10},
+		 	title = Graph 1 - Single-point Crossover \& With Full Random Repair,
+		    ylabel={Fitness},
+		    width=16cm,
+		    height=16cm,
+		    xlabel=Generation,
+		    legend pos=south east,
+		    legend entries={Best Fitness,Avg. Fitness,Std. Deviation},
+		    legend style={anchor=north west,at={(0.7,0.7)}}
+		    ]
+		  \addplot table [mark=none,x=generation,y=best] {../measurements/withoutCandBF.txt};
+		  \addplot table [mark=none,x=generation,y=avg] {../measurements/withoutCandBF.txt};
+		  \addplot table [mark=none,x=generation,y=sd] {../measurements/withoutCandBF.txt};
+		\end{axis}
+		\end{tikzpicture}
+	\end{figure}
+
+	\clearpage
+	\subsubsection{Adding Best-First method}
+	\textbf{Result: 2249, Average: 2227}
+
+	Apparently, Best-First method is a good approach for our task, but algorithm stuck at local optimum as well.
+	\begin{figure}[h!]
+		\centering
+		\begin{tikzpicture}
+		\begin{axis}[
+			title style={anchor=center,yshift=10},
+		 	title = Graph 2 - Adding Best-First method,
+		    ylabel={Fitness},
+		    width=16cm,
+		    height=16cm,
+		    xlabel=Generation,
+		    legend pos=south east,
+		    legend entries={Best Fitness,Avg. Fitness,Std. Deviation},
+		    legend style={anchor=north west,at={(0.7,0.7)}}
+		    ]
+		  \addplot table [mark=none,x=generation,y=best] {../measurements/withoutCatastrophe.txt};
+		  \addplot table [mark=none,x=generation,y=avg] {../measurements/withoutCatastrophe.txt};
+		  \addplot table [mark=none,x=generation,y=sd] {../measurements/withoutCatastrophe.txt};
+		\end{axis}
+		\end{tikzpicture}
+	\end{figure}
+
+	\clearpage
+	\subsubsection{Adding Catastrophe method}
+	\textbf{Result: 2301, Average: 2282} 
+
+	Catastrophes adds new undiscoved solutions into population and because of that, GA is able to leave local optima. As It can be seen on graph, when std. deviation is near zero, catastrophe resets some of population and std. devitation is much higher. 
+	\begin{figure}[h!]
+		\centering
+		\begin{tikzpicture}
+		\begin{axis}[
+			title style={anchor=center,yshift=10},
+		 	title = Graph 3 - Adding Catastrophe method,
+		    ylabel={Fitness},
+		    width=16cm,
+		    height=16cm,
+		    xlabel=Generation,
+		    legend pos=south east,
+		    legend entries={Best Fitness,Avg. Fitness,Std. Deviation, Catastrophe},
+		    legend style={anchor=north west,at={(0.7,0.7)}}
+		    ]
+		  \addplot table [mark=none,x=generation,y=best] {../measurements/nonHeuristicRepair.txt};
+		  \addplot table [mark=none,x=generation,y=avg] {../measurements/nonHeuristicRepair.txt};
+		  \addplot table [mark=none,x=generation,y=sd] {../measurements/nonHeuristicRepair.txt};
+		  \addplot table [only marks,mark=o,x=generation,y=catastrophe] {../measurements/nonHeuristicRepair.txt};
+		\end{axis}
+		\end{tikzpicture}
+	\end{figure}
+
+	\clearpage
+	\subsubsection{Adding Heuristic Repair method}
+	\textbf{Result: 2311, Average: 2287}
+
+	What I am personally very pleased for is, that my self-developed heuristic repair actually worked. The heuristic approach helps to reach higher fitness much faster than without it.
+	\begin{figure}[h!]
+		\centering
+		\begin{tikzpicture}
+		\begin{axis}[
+			title style={anchor=center,yshift=10},
+		 	title = Graph 4 - Adding Heuristic Repair method,
+		    ylabel={Fitness},
+		    width=16cm,
+		    height=16cm,
+		    xlabel=Generation,
+		    legend pos=south east,
+		    legend entries={Best Fitness,Avg. Fitness,Std. Deviation, Catastrophe},
+		    legend style={anchor=north west,at={(0.7,0.7)}}
+		    ]
+		  \addplot table [mark=none,x=generation,y=best] {../measurements/all.txt};
+		  \addplot table [mark=none,x=generation,y=avg] {../measurements/all.txt};
+		  \addplot table [mark=none,x=generation,y=sd] {../measurements/all.txt};
+		  \addplot table [only marks,mark=o,x=generation,y=catastrophe] {../measurements/all.txt};
+		\end{axis}
+		\end{tikzpicture}
+	\end{figure}
+
+	\clearpage
+	\subsubsection{Using uniform crossover instead of single-point crossover}
+	\textbf{Result: 2311, Average: 2296}
+
+	A uniform crossover is able to reach even higher average best fitness. I assume it is because of kind of 3 SAT, where an order of genes in chromosome is not important and uniform crossover can create much different solutions than single-point crossover.
+	\begin{figure}[h!]
+		\centering
+		\begin{tikzpicture}
+		\begin{axis}[
+			title style={anchor=center,yshift=10},
+		 	title = Graph 5 - Using uniform crossover instead of single-point crossover,
+		    ylabel={Fitness},
+		    width=16cm,
+		    height=16cm,
+		    xlabel=Generation,
+		    legend pos=south east,
+		    legend entries={Best Fitness,Avg. Fitness,Std. Deviation, Catastrophe},
+		    legend style={anchor=north west,at={(0.7,0.7)}}
+		    ]
+		  \addplot table [mark=none,x=generation,y=best] {../measurements/allUniform.txt};
+		  \addplot table [mark=none,x=generation,y=avg] {../measurements/allUniform.txt};
+		  \addplot table [mark=none,x=generation,y=sd] {../measurements/allUniform.txt};
+		  \addplot table [only marks,mark=o,x=generation,y=catastrophe] {../measurements/allUniform.txt};
+		\end{axis}
+		\end{tikzpicture}
+	\end{figure}
+	\clearpage
+	\subsubsection{Comparison of highest reached fitness over generations}
+	It can be seen that my heuristic approch helped GA to find better solution in earlier generations. The uniform crossover also reached higher fitness in earlier generation than single-point crossover.
+	\begin{figure}[h!]
+		\centering
+		\begin{tikzpicture}
+		\begin{axis}[
+			title style={anchor=center,yshift=10},
+		 	title = Graph 6 - Comparison of highest reached fitness over generations,
+		    ylabel={Fitness},
+		    width=16cm,
+		    height=15cm,
+		    xlabel=Generation,
+		    legend pos=south east,
+		    legend entries={Graph 5: UC-HR-FRR-BF-C, Graph 4: SPC-HR-FRR-BF-C, Graph 3: SPC-FRR-BF-C, Graph 2: SPC-FRR-BF, Graph 1: SPC-FRR},
+		    legend style={anchor=north west,at={(0.6,0.7)}}
+		    ]
+		  \addplot table [mark=none,x=generation,y=allUniform] {../measurements/sum.txt};
+		  \addplot table [mark=none,x=generation,y=all] {../measurements/sum.txt};
+		  \addplot table [mark=none,x=generation,y=nonHeuristic] {../measurements/sum.txt};
+		  \addplot table [mark=none,x=generation,y=withouCBF] {../measurements/sum.txt};
+		  \addplot table [mark=none,x=generation,y=withoutCatastrophe] {../measurements/sum.txt};
+		\end{axis}
+		\end{tikzpicture}
+	\end{figure}
+	\begin{table}[htb]\centering
+\begin{tabular}{c|c}
+\hline
+	\multicolumn{1}{l}{\textbf{Method}} & \multicolumn{1}{c}{\textbf{Best Fitness}} \\ \hline
+   	 \multicolumn{1}{l}{Graph 1: SPC-FRR} & \multicolumn{1}{c}{2183} \\ \hline
+   	 \multicolumn{1}{l}{Graph 2: SPC-FRR-BF} & \multicolumn{1}{c}{2249} \\ \hline
+   	 \multicolumn{1}{l}{Graph 3: SPC-FRR-BF-C} & \multicolumn{1}{c}{2301} \\ \hline
+   	 \multicolumn{1}{l}{Graph 4: SPC-HR-FRR-BF-C} & \multicolumn{1}{c}{2311} \\ \hline
+   	 \multicolumn{1}{l}{Graph 5: UC-HR-FRR-BF-C} & \multicolumn{1}{c}{2311} \\ \hline
+\end{tabular}
+\end{table}
+\clearpage
+\subsubsection{Comparison of average best fitness for all used methods}
+
+\begin{table}[htb]\centering
+\begin{tabular}{c|c|c|c|c}
+\hline
+	\multicolumn{1}{c}{\textbf{SPC-FRR}} & \multicolumn{1}{c}{\textbf{SPC-FRR-BF}} & \multicolumn{1}{c}{\textbf{SPC-FRR-BF-C}} & \multicolumn{1}{c}{\textbf{SPC-HR-FRR-BF-C}} & \multicolumn{1}{c}{\textbf{UC-HR-FRR-BF-C}} \\ \hline
+   	 \multicolumn{1}{c}{2167} &	\multicolumn{1}{c}{2176} &	\multicolumn{1}{c}{2214} &	\multicolumn{1}{c}{2301} &	\multicolumn{1}{c}{2292}  \\ \hline 
+	\multicolumn{1}{c}{2183} &	\multicolumn{1}{c}{2249} &	\multicolumn{1}{c}{2213} &	\multicolumn{1}{c}{2299} &	\multicolumn{1}{c}{2310}  \\ \hline 
+	\multicolumn{1}{c}{2196} &	\multicolumn{1}{c}{2195} &	\multicolumn{1}{c}{2310} &	\multicolumn{1}{c}{2232} &	\multicolumn{1}{c}{2222}  \\ \hline 
+	\multicolumn{1}{c}{2207} &	\multicolumn{1}{c}{2195} &	\multicolumn{1}{c}{2292} &	\multicolumn{1}{c}{2292} &	\multicolumn{1}{c}{2301}  \\ \hline 
+	\multicolumn{1}{c}{2277} &	\multicolumn{1}{c}{2267} &	\multicolumn{1}{c}{2232} &	\multicolumn{1}{c}{2293} &	\multicolumn{1}{c}{2301}  \\ \hline 
+	\multicolumn{1}{c}{2208} &	\multicolumn{1}{c}{2295} &	\multicolumn{1}{c}{2311} &	\multicolumn{1}{c}{2309} &	\multicolumn{1}{c}{2311}  \\ \hline 
+	\multicolumn{1}{c}{2147} &	\multicolumn{1}{c}{2185} &	\multicolumn{1}{c}{2301} &	\multicolumn{1}{c}{2301} &	\multicolumn{1}{c}{2301}  \\ \hline 
+	\multicolumn{1}{c}{2178} &	\multicolumn{1}{c}{2276} &	\multicolumn{1}{c}{2301} &	\multicolumn{1}{c}{2302} &	\multicolumn{1}{c}{2299}  \\ \hline 
+	\multicolumn{1}{c}{2198} &	\multicolumn{1}{c}{2284} &	\multicolumn{1}{c}{2301} &	\multicolumn{1}{c}{2301} &	\multicolumn{1}{c}{2301}  \\ \hline 
+	\multicolumn{1}{c}{2254} &	\multicolumn{1}{c}{2217} &	\multicolumn{1}{c}{2231} &	\multicolumn{1}{c}{2291} &	\multicolumn{1}{c}{2302}  \\ \hline 
+	\multicolumn{1}{c}{2274} &	\multicolumn{1}{c}{2265} &	\multicolumn{1}{c}{2222} &	\multicolumn{1}{c}{2299} &	\multicolumn{1}{c}{2293}  \\ \hline 
+	\multicolumn{1}{c}{2283} &	\multicolumn{1}{c}{2185} &	\multicolumn{1}{c}{2212} &	\multicolumn{1}{c}{2292} &	\multicolumn{1}{c}{2310}  \\ \hline 
+	\multicolumn{1}{c}{2186} &	\multicolumn{1}{c}{2176} &	\multicolumn{1}{c}{2232} &	\multicolumn{1}{c}{2231} &	\multicolumn{1}{c}{2293}  \\ \hline 
+	\multicolumn{1}{c}{2273} &	\multicolumn{1}{c}{2168} &	\multicolumn{1}{c}{2302} &	\multicolumn{1}{c}{2222} &	\multicolumn{1}{c}{2299}  \\ \hline 
+	\multicolumn{1}{c}{2173} &	\multicolumn{1}{c}{2095} &	\multicolumn{1}{c}{2299} &	\multicolumn{1}{c}{2291} &	\multicolumn{1}{c}{2311}  \\ \hline 
+	\multicolumn{1}{c}{2187} &	\multicolumn{1}{c}{2254} &	\multicolumn{1}{c}{2301} &	\multicolumn{1}{c}{2299} &	\multicolumn{1}{c}{2299}  \\ \hline 
+	\multicolumn{1}{c}{2209} &	\multicolumn{1}{c}{2184} &	\multicolumn{1}{c}{2302} &	\multicolumn{1}{c}{2297} &	\multicolumn{1}{c}{2302}  \\ \hline 
+	\multicolumn{1}{c}{2166} &	\multicolumn{1}{c}{2266} &	\multicolumn{1}{c}{2311} &	\multicolumn{1}{c}{2288} &	\multicolumn{1}{c}{2301}  \\ \hline 
+	\multicolumn{1}{c}{2277} &	\multicolumn{1}{c}{2286} &	\multicolumn{1}{c}{2301} &	\multicolumn{1}{c}{2310} &	\multicolumn{1}{c}{2311}  \\ \hline 
+	\multicolumn{1}{c}{2185} &	\multicolumn{1}{c}{2197} &	\multicolumn{1}{c}{2301} &	\multicolumn{1}{c}{2309} &	\multicolumn{1}{c}{2299}  \\ \hline 
+	\multicolumn{1}{c}{2166} &	\multicolumn{1}{c}{2258} &	\multicolumn{1}{c}{2310} &	\multicolumn{1}{c}{2299} &	\multicolumn{1}{c}{2299}  \\ \hline 
+	\multicolumn{1}{c}{2264} &	\multicolumn{1}{c}{2290} &	\multicolumn{1}{c}{2308} &	\multicolumn{1}{c}{2306} &	\multicolumn{1}{c}{2293}  \\ \hline 
+	\multicolumn{1}{c}{2286} &	\multicolumn{1}{c}{2297} &	\multicolumn{1}{c}{2301} &	\multicolumn{1}{c}{2293} &	\multicolumn{1}{c}{2230}  \\ \hline 
+	\multicolumn{1}{c}{2264} &	\multicolumn{1}{c}{2287} &	\multicolumn{1}{c}{2301} &	\multicolumn{1}{c}{2275} &	\multicolumn{1}{c}{2301}  \\ \hline 
+	\multicolumn{1}{c}{2178} &	\multicolumn{1}{c}{2264} &	\multicolumn{1}{c}{2301} &	\multicolumn{1}{c}{2292} &	\multicolumn{1}{c}{2301}  \\ \hline 
+	\multicolumn{1}{c}{2173} &	\multicolumn{1}{c}{2237} &	\multicolumn{1}{c}{2300} &	\multicolumn{1}{c}{2308} &	\multicolumn{1}{c}{2293}  \\ \hline 
+	\multicolumn{1}{c}{2295} &	\multicolumn{1}{c}{2286} &	\multicolumn{1}{c}{2301} &	\multicolumn{1}{c}{2301} &	\multicolumn{1}{c}{2301}  \\ \hline 
+	\multicolumn{1}{c}{2269} &	\multicolumn{1}{c}{2173} &	\multicolumn{1}{c}{2310} &	\multicolumn{1}{c}{2293} &	\multicolumn{1}{c}{2311}  \\ \hline 
+	\multicolumn{1}{c}{2265} &	\multicolumn{1}{c}{2158} &	\multicolumn{1}{c}{2231} &	\multicolumn{1}{c}{2232} &	\multicolumn{1}{c}{2308}  \\ \hline 
+	\multicolumn{1}{c}{2196} &	\multicolumn{1}{c}{2165} &	\multicolumn{1}{c}{2309} &	\multicolumn{1}{c}{2260} &	\multicolumn{1}{c}{2293}  \\ \hline \hline 
+     \multicolumn{5}{c}{\textbf{Average}} \\ \hline
+	\multicolumn{1}{c}{\textbf{2219}} &	\multicolumn{1}{c}{\textbf{2227}} &	\multicolumn{1}{c}{\textbf{2282}} &	\multicolumn{1}{c}{\textbf{2287}} &	\multicolumn{1}{c}{\textbf{2296}}  \\
+\end{tabular}
+\end{table}
+
+
+\section{Conclusion}
+	Apparently, the last method with uniform crossover gives the best results, which was experimentally tested and proved. I was very pleased that my own heuristic works very well and improved the finding of better solutions.
+\end{document}

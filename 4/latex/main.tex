@@ -1,0 +1,265 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Lachaise Assignment
+% LaTeX Template
+% Version 1.0 (26/6/2018)
+%
+% This template originates from:
+% http://www.LaTeXTemplates.com
+%
+% Authors:
+% Marion Lachaise & François Févotte
+% Vel (vel@LaTeXTemplates.com)
+%
+% License:
+% CC BY-NC-SA 3.0 (http://creativecommons.org/licenses/by-nc-sa/3.0/)
+% 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%----------------------------------------------------------------------------------------
+%	PACKAGES AND OTHER DOCUMENT CONFIGURATIONS
+%----------------------------------------------------------------------------------------
+
+\documentclass{article}
+
+\input{structure.tex} % Include the file specifying the document structure and custom commands
+\usepackage{pgfplots}
+\usepackage{pgfplotstable}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{algorithmicx}
+\usepackage{colortbl}
+
+\pgfplotstableset{% global config, for example in the preamble
+  every head row/.style={before row=\toprule,after row=\midrule},
+  every last row/.style={after row=\bottomrule},
+  fixed,precision=8,
+}
+
+%----------------------------------------------------------------------------------------
+%	ASSIGNMENT INFORMATION
+%----------------------------------------------------------------------------------------
+
+\title{MI-PAA: Assignment \#4} % Title of the assignment
+
+\author{Petr Hanzl\\ \texttt{hanzlpe2@fit.cvut.cz}} % Author name and email address
+
+\date{Czech Technical University - Faculty of Information Technology --- \today} % University, school and/or department name(s) and a date
+
+%----------------------------------------------------------------------------------------
+
+\begin{document}
+
+\maketitle % Print the title
+
+\section*{Tasks}
+	\begin{enumerate}
+		\item Zvolte si heuristiku, kterou budete řešit problém vážené splnitelnosti booleovské formule (simulované ochlazování, simulovaná evoluce, tabu prohledávání)
+		\item Tuto heuristiku použijte pro řešení problému batohu. Můžete použít dostupné instance problému (zde), anebo si vygenerujte své instance pomocí generátoru. Používejte instance s větším počtem věcí ($>30$).
+		\item Hlavním cílem domácí práce je seznámit se s danou heuristikou, zejména se způsobem, jakým se nastavují její parametry (rozvrh ochlazování, selekční tlak, tabu lhůta\dots) a modifikace (zjištění počáteční teploty, mechanismus slekce, tabu atributy\dots). Není-li Vám cokoli jasné, prosíme ptejte se na cvičeních.
+		\item Problém batohu není příliš obtížný, většinou budete mít k dispozici globální maxima (exaktní řešení) z předchozích prací, například z dynamického programování. Při správném nastavení parametrů byste měli vždy dosáhnout těchto optim, případně pouze velice malých chyb. Doba výpočtu může ovšem být relativně větší. Závěrečná úloha je co do nastavení a požadovaného výkonu heuristiky podstatně náročnější a může vyžadovat zcela jiné nastavení parametrů.
+	\end{enumerate}
+
+%----------------------------------------------------------------------------------------
+%	INTRODUCTION
+%----------------------------------------------------------------------------------------
+\hrulefill
+\section*{Introduction} % Unnumbered section
+
+The knapsack problem is a basic algoritmic problem, taught at universities all around the world. Therefore, it is considered to be the basic knowledge of every computer science graduate. The knapsack problem has various modifications, the most common version is known as 0/1 knapsack problem.
+
+%----------------------------------------------------------------------------------------
+%	PROBLEM 1
+%----------------------------------------------------------------------------------------
+
+\section*{0/1 knapsack problem} % Numbered section
+
+ Given the knapsack weight capacity of $W$ kilograms and a set of $N$ items, each has its own unique index $i \in N^+$, a value of $v_i \in R^+$ money and weight of $w_i \in R^+$ kilograms. Determine which items should be put into the knapsack to maximize its value so that the sum of the weights is less than or equal to the weight capacity.
+
+% Math equation/formula
+\begin{equation}
+	\text{maximize}\sum_{i=1}^{n}{v_ix_i}
+\end{equation}
+
+
+\begin{equation}
+	\text{subject to}\sum_{i=1}^{n}{w_ix_i} \leq W \text{ and }  x_i \in \{0,1\}
+\end{equation}
+\begin{info}
+	$x_i$ represents whether the $i$-th item is present in the knapsack or not.
+\end{info}
+%------------------------------------------------
+\clearpage
+
+\section{Genetic Algorithm}
+	Many natural processes have found an application into problem solving and optimization problems. The evolution and the natural selection is not an exception. There are more algorithms which can simulate the evolution, but they usually use similar mechanisms to reproduce an optimal or at least a suboptimal solution. These mechanism are: reproduction, mutation a selection. 
+
+	The genetic algorithm (GA) is one the algorithms and I have chosen GA, because of its representation of an individual, which is a binary string of zeros and ones. This representation is ideal for 0/1 knapsack problem.
+
+
+	\subsection{Reproduction}
+		\subsubsection{Single-point Crossover}
+		Genomes of two parents are split at randomly picked point and the parts are swapped to make a child.
+		\subsubsection{Uniform Crossover}
+		In uniform crossover, each bit of a child is randomly picked from one of its parents.
+	\subsection{Mutation}
+		For the GA, there is a simple way how to mutate bits and it is flipping their values.
+	\subsection{Selection}
+		\subsubsection{Definition: Fitness}
+		Fitness is defined as a quality of a feasible solution. Obviously, for the knapsack problem it is defined as a total price of items stored in the knapsack. The definition of the fitness is key feature for selection. Also, the definition can vary, not only for different problems, it can vary even for the same problems. For example, I could define the fitness as a subtraction to sum of all items and a lower value would mean a better solution.
+		\subsection{Tournament}
+		A few individuals are repeatedly picked from the population and the best solution with the highest fitness survives to the next generation.
+		\subsection{Catastrophe}
+		Most of the population is killed, when the fitness does not change over iterations. The catastrophe leads to higher standart deviation in population and finds new ways of solutions.
+
+\section{Experimental part}
+	In experimental part, I primarily focused on testing different methods or implementation for GA than measuring a computation time or different parameters, because evolutionary-based algorithms are more interesting for mechanisms they use.
+	
+	\subsection{Recommended data}
+	My version of genetic algorithm returned global optima for all recommended inputs. Because of that, I used the generator from the previous assigment to generate my own input with 1000 items. Concretely, I used generator with the following parameters: \textbf{-n 1000 -N 1 -m 0.5 -W 1000 -C 1000 -k 1 -d 0}.
+
+	\subsection{Generated data}
+	I have chosen only the most interesting measured data, usually the data that lead to some improvements of the final fitness or to unexpected findings.
+
+	All the data were measured over 1000 generations with 1000 individuals in population and with the same crossover and mutation probability. Crossover: 90 \% Mutation: 10 \%.
+	\subsubsection{Single-point Crossover, Tournament size: 5}
+	\textbf{Result: 324557} 
+	\begin{figure}[h!]
+		\centering
+		\begin{tikzpicture}
+		\begin{axis}[
+			title style={anchor=center,yshift=10},
+		 	title = Graph 1 - Single-point Crossover and Tournament size: 5,
+		    ylabel={Fitness},
+		    width=16cm,
+		    height=16cm,
+		    xlabel=Generation,
+		    legend pos=south east,
+		    legend entries={Best Fitness,Avg. Fitness,Std. Deviation},
+		    legend style={anchor=north west,at={(0.7,0.7)}}
+		    ]
+		  \addplot table [mark=none,x=generation,y=best] {out.1000.dat};
+		  \addplot table [mark=none,x=generation,y=avg] {out.1000.dat};
+		  \addplot table [mark=none,x=generation,y=sd] {out.1000.dat};
+		\end{axis}
+		\end{tikzpicture}
+	\end{figure}
+
+	\clearpage
+	\subsubsection{Uniform Crossover, Tournament size: 5}
+	I assumed that the uniform crossover could perform better than the single-point crossover for genes with irrelevant position in chromosomes. Howerever, the uniform crossover actually perform worse. \textbf{Result: 280258} 
+	\begin{figure}[h!]
+		\centering
+		\begin{tikzpicture}
+		\begin{axis}[
+			title style={anchor=center,yshift=10},
+		 	title = Graph 2 - Uniform Crossover and Tournament size: 5,
+		    ylabel={Fitness},
+		    width=16cm,
+		    height=20cm,
+		    xlabel=Generation,
+		    legend pos=south east,
+		    legend entries={Best Fitness,Avg. Fitness,Std. Deviation},
+		    legend style={anchor=north west,at={(0.7,0.7)}}
+		    ]
+		  \addplot table [mark=none,x=generation,y=best] {out-uniformCrossover.1000.dat};
+		  \addplot table [mark=none,x=generation,y=avg] {out-uniformCrossover.1000.dat};
+		  \addplot table [mark=none,x=generation,y=sd] {out-uniformCrossover.1000.dat};
+		\end{axis}
+		\end{tikzpicture}
+	\end{figure}
+
+	\clearpage
+	\subsubsection{Single-point Crossover, Tournament size: 3}
+	\textbf{Result: 339258} 
+	The first experiment showed that the standart deviation was still a bit high, but the algorithm could not get out of the local optimum, so I tried to shrink the tournament pool to 3 and it worked.
+	\begin{figure}[h!]
+		\centering
+		\begin{tikzpicture}
+		\begin{axis}[
+			title style={anchor=center,yshift=10},
+		 	title = Graph 3 - Single-point Crossover and Tournament size: 3,
+		    ylabel={Fitness},
+		    width=16cm,
+		    height=20cm,
+		    xlabel=Generation,
+		    legend pos=south east,
+		    legend entries={Best Fitness,Avg. Fitness,Std. Deviation},
+		    legend style={anchor=north west,at={(0.7,0.7)}}
+		    ]
+		  \addplot table [mark=none,x=generation,y=best] {out-singlePointCrossover-tournament3.1000.dat};
+		  \addplot table [mark=none,x=generation,y=avg] {out-singlePointCrossover-tournament3.1000.dat};
+		  \addplot table [mark=none,x=generation,y=sd] {out-singlePointCrossover-tournament3.1000.dat};
+		\end{axis}
+		\end{tikzpicture}
+	\end{figure}
+
+	\clearpage
+	\subsubsection{Single-point Crossover, Tournament size: 10}
+	I also measured what would happen if the pool were larger or extra large (like 25, 50, 100 individuals in the tournament ). It just showed, that the GA with smaller tournament perform bettter. \textbf{Result: 320630} 
+	\begin{figure}[h!]
+		\centering
+		\begin{tikzpicture}
+		\begin{axis}[
+			title style={anchor=center,yshift=10},
+		 	title = Graph 4 - Single-point Crossover and Tournament size: 10,
+		    ylabel={Fitness},
+		    width=16cm,
+		    height=20cm,
+		    xlabel=Generation,
+		    legend pos=south east,
+		    legend entries={Best Fitness,Avg. Fitness,Std. Deviation},
+		    legend style={anchor=north west,at={(0.7,0.7)}}
+		    ]
+		  \addplot table [mark=none,x=generation,y=best] {out-singlePointCrossover-tournament10.1000.dat};
+		  \addplot table [mark=none,x=generation,y=avg] {out-singlePointCrossover-tournament10.1000.dat};
+		  \addplot table [mark=none,x=generation,y=sd] {out-singlePointCrossover-tournament10.1000.dat};
+		\end{axis}
+		\end{tikzpicture}
+	\end{figure}
+
+	\clearpage
+	\subsubsection{Single-point Crossover, Tournament size: 3, With Catastrophes}
+	The GA with a tournament size of 3 stuck just after approximately 1 or 2 hundred iterations. Because of that I tried to add new solutions with catastrophes, when the algorithm stuck at local optimum. This lead to constant improvement. Near 700th generation it can be seen that the catastrophe lead to relatively big improvement. \textbf{Result: 344479} 
+	\begin{figure}[h!]
+		\centering
+		\begin{tikzpicture}
+		\begin{axis}[
+			title style={anchor=center,yshift=10},
+		 	title = Graph 5 - Single-point Crossover and Tournament size: 3 With Catastrophes,
+		    ylabel={Fitness},
+		    width=16cm,
+		    height=20cm,
+		    xlabel=Generation,
+		    legend pos=south east,
+		    legend entries={Best Fitness,Avg. Fitness,Std. Deviation, Catastrophe},
+		    legend style={anchor=north west,at={(0.7,0.7)}}
+		    ]
+		  \addplot table [mark=none,x=generation,y=best] {out-singlePointCrossover-tournament3-CATASTROPHE.1000.dat};
+		  \addplot table [mark=none,x=generation,y=avg] {out-singlePointCrossover-tournament3-CATASTROPHE.1000.dat};
+		  \addplot table [mark=none,x=generation,y=sd] {out-singlePointCrossover-tournament3-CATASTROPHE.1000.dat};
+		  \addplot table [only marks,mark=o,x=generation,y=catastrophe] {out-singlePointCrossover-tournament3-CATASTROPHE.1000.dat};
+		\end{axis}
+		\end{tikzpicture}
+	\end{figure}
+\clearpage
+\subsubsection{Summary}
+
+\begin{table}[htb]\centering
+\begin{tabular}{rr}
+\hline
+\multicolumn{1}{l}{\textbf{Experiment}} &\multicolumn{1}{c}{\textbf{Highest fitness}}\\ \hline
+   \multicolumn{1}{l}{Single-point Crossover and Tournament size: 5}                                     &                        \multicolumn{1}{c}{324557}                                      \\ \hline
+     \multicolumn{1}{l}{Single-point Crossover and Tournament size: 5}                                   &                        \multicolumn{1}{c}{280258}                                      \\ \hline
+       \multicolumn{1}{l}{Single-point Crossover and Tournament size: 5}                                 &                        \multicolumn{1}{c}{339258}                                      \\ \hline
+        \multicolumn{1}{l}{Single-point Crossover and Tournament size: 10}                               &                        \multicolumn{1}{c}{320630}                                      \\ \hline
+         \multicolumn{1}{l}{Single-point Crossover and Tournament size: 5, With Catastrophes}                               &                        \multicolumn{1}{c}{344479}                                      \\ \hline
+\end{tabular}
+\end{table}
+
+
+\section{Conclusion}
+	The measuring for the recommended data did not show anything interesting. I did not have to change the parameters for the GA, because it found global optima for all instances on the first run, so I used my own input instead.
+
+	Apparently, the last experiment, the one with the catastrophes, gives the best results. The most unexpeted fact is that single-point crossever gives better results than uniform crossover.
+
+\end{document}
